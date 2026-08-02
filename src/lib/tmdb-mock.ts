@@ -334,7 +334,8 @@ const mock = {
 };
 
 export function tmdbIsMock() {
-  return !process.env.TMDB_API_KEY || process.env.TMDB_API_KEY.trim() === "";
+  const key = process.env.EXPO_PUBLIC_TMDB_API_KEY ?? process.env.TMDB_API_KEY ?? "";
+  return !key || key.trim() === "";
 }
 
 export { mock as mockTmdb };

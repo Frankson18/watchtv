@@ -1,14 +1,18 @@
-"use client";
-
-import { createClient } from "./supabase-client";
+import { createClient } from "./supabase";
 import type { LibraryItem, MediaType, MediaStatus, WatchedEpisode } from "./types";
+import { tmdbApiUrl, isMockMode } from "./tmdb-config";
 
 type Sb = NonNullable<ReturnType<typeof createClient>>;
-async function sb(): Promise<Sb | null> {
-  const c = createClient();
+
+let client: Sb | null = null;
+function sb(): Sb | null {
+  if (!client) client = createClient();
+  return client;
+}
+
+async function sbAuthed(): Promise<Sb | null> {
+  const c = sb();
   if (!c) return null;
-  const { data } = await c.auth.getSession();
-  if (!data.session) return null;
   return c;
 }
 
@@ -16,7 +20,7 @@ export async function listLibrary(filter?: {
   status?: MediaStatus;
   mediaType?: MediaType;
 }): Promise<LibraryItem[]> {
-  const c = await sb();
+  const c = await sbAuthed();
   if (!c) return [];
   let q = c.from("library").select("*").order("updated_at", { ascending: false });
   if (filter?.status) q = q.eq("status", filter.status);
@@ -27,7 +31,7 @@ export async function listLibrary(filter?: {
 }
 
 export async function listWatching(): Promise<LibraryItem[]> {
-  const c = await sb();
+  const c = await sbAuthed();
   if (!c) return [];
   const { data, error } = await c
     .from("library")
@@ -48,7 +52,7 @@ export async function addToLibrary(input: {
   release_date?: string | null;
   total_seasons?: number | null;
 }): Promise<LibraryItem | null> {
-  const c = await sb();
+  const c = await sbAuthed();
   if (!c) return null;
   const payload = {
     ...input,
@@ -58,7 +62,6 @@ export async function addToLibrary(input: {
     total_seasons: input.total_seasons ?? null,
     status: input.status ?? "watching",
   };
-
   const { data: existing, error: selErr } = await c
     .from("library")
     .select("id")
@@ -66,7 +69,6 @@ export async function addToLibrary(input: {
     .eq("media_type", payload.media_type)
     .maybeSingle();
   if (selErr) throw selErr;
-
   if (existing?.id) {
     const { data, error } = await c
       .from("library")
@@ -83,7 +85,6 @@ export async function addToLibrary(input: {
     if (error) throw error;
     return data as LibraryItem;
   }
-
   const { data, error } = await c
     .from("library")
     .insert(payload)
@@ -94,27 +95,15 @@ export async function addToLibrary(input: {
 }
 
 export async function setStatus(id: string, status: MediaStatus) {
-  const c = await sb();
+  const c = await sbAuthed();
   if (!c) return;
   await c.from("library").update({ status }).eq("id", id);
 }
 
 export async function removeFromLibrary(id: string): Promise<void> {
-  const c = await sb();
+  const c = await sbAuthed();
   if (!c) return;
   await c.from("library").delete().eq("id", id);
-}
-
-export async function countWatched(libraryId: string, season: number): Promise<number> {
-  const c = await sb();
-  if (!c) return 0;
-  const { count, error } = await c
-    .from("watched_episodes")
-    .select("id", { count: "exact", head: true })
-    .eq("library_id", libraryId)
-    .eq("season", season);
-  if (error) throw error;
-  return count ?? 0;
 }
 
 export async function markEpisode(
@@ -123,9 +112,8 @@ export async function markEpisode(
   episode: number,
   tmdbId?: number,
 ): Promise<void> {
-  const c = await sb();
+  const c = await sbAuthed();
   if (!c) return;
-
   const { data: existing } = await c
     .from("watched_episodes")
     .select("id, watch_count")
@@ -142,16 +130,14 @@ export async function markEpisode(
     if (error) throw error;
   } else {
     let runtime: number | null = null;
-    if (tmdbId) {
+    if (tmdbId && !isMockMode()) {
       try {
-        const r = await fetch(`/api/tmdb/tv/${tmdbId}/season/${season}/episode/${episode}`);
+        const r = await fetch(tmdbApiUrl(`/tv/${tmdbId}/season/${season}/episode/${episode}`));
         if (r.ok) {
           const ep = await r.json();
           runtime = typeof ep.runtime === "number" ? ep.runtime : null;
         }
-      } catch {
-        /* ignore — runtime optional */
-      }
+      } catch {}
     }
     const { error } = await c.from("watched_episodes").insert({
       library_id: libraryId,
@@ -163,7 +149,6 @@ export async function markEpisode(
     });
     if (error) throw error;
   }
-
   const { error: libErr } = await c
     .from("library")
     .update({
@@ -180,7 +165,7 @@ export async function rewatchEpisode(
   season: number,
   episode: number,
 ): Promise<void> {
-  const c = await sb();
+  const c = await sbAuthed();
   if (!c) return;
   const { data: existing } = await c
     .from("watched_episodes")
@@ -197,36 +182,21 @@ export async function rewatchEpisode(
   if (error) throw error;
 }
 
-export async function unmarkEpisode(
-  libraryId: string,
-  season: number,
-  episode: number,
-): Promise<void> {
-  const c = await sb();
-  if (!c) return;
-  await c
-    .from("watched_episodes")
-    .delete()
-    .eq("library_id", libraryId)
-    .eq("season", season)
-    .eq("episode", episode);
-}
-
 export async function markMovieWatched(
   libraryId: string,
   tmdbId: number,
 ): Promise<void> {
-  const c = await sb();
+  const c = await sbAuthed();
   if (!c) return;
   let runtime: number | null = null;
-  try {
-    const r = await fetch(`/api/tmdb/movie/${tmdbId}`);
-    if (r.ok) {
-      const m = await r.json();
-      runtime = typeof m.runtime === "number" ? m.runtime : null;
-    }
-  } catch {
-    /* ignore */
+  if (!isMockMode()) {
+    try {
+      const r = await fetch(tmdbApiUrl(`/movie/${tmdbId}`));
+      if (r.ok) {
+        const m = await r.json();
+        runtime = typeof m.runtime === "number" ? m.runtime : null;
+      }
+    } catch {}
   }
   const { error } = await c
     .from("library")
@@ -236,19 +206,17 @@ export async function markMovieWatched(
 }
 
 export async function rewatchMovie(libraryId: string): Promise<void> {
-  const c = await sb();
+  const c = await sbAuthed();
   if (!c) return;
   const { error } = await c
     .from("library")
-    .update({
-      last_watched_at: new Date().toISOString(),
-    })
+    .update({ last_watched_at: new Date().toISOString() })
     .eq("id", libraryId);
   if (error) throw error;
 }
 
 export async function listWatched(libraryId: string, season: number): Promise<WatchedEpisode[]> {
-  const c = await sb();
+  const c = await sbAuthed();
   if (!c) return [];
   const { data, error } = await c
     .from("watched_episodes")

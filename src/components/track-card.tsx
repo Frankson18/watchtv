@@ -1,15 +1,11 @@
-"use client";
-
-import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { View, Text, TouchableOpacity, Pressable } from "react-native";
+import { router } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import Poster from "./poster";
 import { markEpisode } from "@/lib/library";
 import type { LibraryItem } from "@/lib/types";
-import { Check, ChevronRight } from "lucide-react";
-
-const REVEAL_MAX = 120;
-const CONFIRM_AT = 50;
-const TAP_THRESHOLD = 8;
 
 export default function TrackCard({
   item,
@@ -22,35 +18,20 @@ export default function TrackCard({
   watchedCount?: number;
   onUpdated?: () => void;
 }) {
-  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [flash, setFlash] = useState(false);
   const [popping, setPopping] = useState(false);
-  const [epDisplay, setEpDisplay] = useState<number>(
-    watchedCount ?? item.current_episode,
-  );
-  const [dx, setDx] = useState(0);
-  const [snapping, setSnapping] = useState(false);
-  const startRef = useRef<{ x: number; active: boolean; moved: boolean }>({
-    x: 0,
-    active: false,
-    moved: false,
-  });
-  const dxRef = useRef(0);
+  const [epDisplay, setEpDisplay] = useState(watchedCount ?? item.current_episode);
 
   const total = totalEps ?? 0;
   const watched = epDisplay;
   const remaining = total ? Math.max(0, total - watched) : 0;
   const pct = total ? Math.min(100, Math.round((watched / total) * 100)) : 0;
 
-  function setBoth(v: number) {
-    dxRef.current = v;
-    setDx(v);
-  }
-
   async function confirm() {
     if (busy) return;
     setBusy(true);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     try {
       const next = item.current_episode + 1;
       await markEpisode(item.id, item.current_season, next, item.tmdb_id);
@@ -62,130 +43,66 @@ export default function TrackCard({
       onUpdated?.();
     } finally {
       setBusy(false);
-      setSnapping(true);
-      setBoth(0);
-      setTimeout(() => setSnapping(false), 250);
-    }
-  }
-
-  function onStart(clientX: number) {
-    startRef.current = { x: clientX, active: true, moved: false };
-    setSnapping(false);
-  }
-  function onMove(clientX: number) {
-    if (!startRef.current.active) return;
-    const raw = clientX - startRef.current.x;
-    if (Math.abs(raw) > TAP_THRESHOLD) startRef.current.moved = true;
-    if (raw < 0) {
-      const clamped = Math.max(-REVEAL_MAX, raw);
-      setBoth(clamped);
-    } else if (startRef.current.moved) {
-      setBoth(0);
-    }
-  }
-  function onEnd() {
-    if (!startRef.current.active) return;
-    const wasTap = !startRef.current.moved;
-    startRef.current.active = false;
-    if (wasTap) {
-      router.push(`/titulo/${item.tmdb_id}`);
-      return;
-    }
-    if (-dxRef.current > CONFIRM_AT) {
-      confirm();
-    } else {
-      setSnapping(true);
-      setBoth(0);
-      setTimeout(() => setSnapping(false), 250);
     }
   }
 
   return (
-    <div
-      className="relative rounded-xl overflow-hidden touch-none select-none"
-      onTouchStart={(e) => onStart(e.touches[0].clientX)}
-      onTouchMove={(e) => onMove(e.touches[0].clientX)}
-      onTouchEnd={onEnd}
-      onPointerDown={(e) => onStart(e.clientX)}
-      onPointerMove={(e) => {
-        if (e.buttons === 1) onMove(e.clientX);
+    <Pressable
+      onPress={() => router.push(`/titulo/${item.tmdb_id}`)}
+      style={{
+        flexDirection: "row",
+        gap: 12,
+        padding: 12,
+        backgroundColor: flash ? "rgba(91,214,143,0.1)" : "#161619",
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: flash ? "rgba(91,214,143,0.3)" : "#2A2A30",
       }}
-      onPointerUp={onEnd}
-      onPointerCancel={onEnd}
     >
-      <div
-        className="absolute inset-0 flex items-center justify-end px-5 rounded-xl bg-success/15"
-        style={{ opacity: Math.min(1, -dx / REVEAL_MAX) }}
-      >
-        <div
-          className="flex items-center gap-2 text-success text-xs font-semibold"
-          style={{ transform: `translateX(${Math.min(0, dx + REVEAL_MAX)}px)` }}
-        >
-          <Check className="w-5 h-5" strokeWidth={3} />
-          Marcar visto
-        </div>
-      </div>
-
-      <div
-        className={`flex gap-3 p-3 bg-bg-elev rounded-xl border border-border ${
-          flash ? "bg-success/10 border-success/30" : ""
-        } ${snapping ? "transition-transform duration-200 ease-out" : ""}`}
-        style={{ transform: `translateX(${dx}px)` }}
-      >
-        <div className="w-[60px] h-[88px] shrink-0 pointer-events-none">
-          <Poster
-            path={item.poster_path}
-            alt={item.title}
-            size="w92"
-            className="w-full h-full"
-          />
-        </div>
-        <div className="flex-1 min-w-0 flex flex-col gap-1.5 pointer-events-none">
-          <div className="flex items-start justify-between gap-2">
-            <h3 className="text-[15px] font-semibold truncate flex-1">
-              {item.title}
-            </h3>
-            <ChevronRight className="w-4 h-4 text-text-tertiary shrink-0 mt-0.5" />
-            <span className="shrink-0 px-2 py-0.5 rounded-full bg-accent-dim text-accent text-[10px] font-semibold">
-              Assistindo
-            </span>
-          </div>
-          <p className="text-[13px] font-medium text-text-secondary transition-opacity duration-150">
-            T{item.current_season} • E{watched}
-            {total ? ` de ${total}` : ""}
-          </p>
-          <div className="h-1 rounded-full bg-border overflow-hidden">
-            <div
-              className="h-full bg-accent rounded-full transition-all duration-300"
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] text-text-tertiary">
-              {total ? `Faltam ${remaining} eps` : "—"}
-            </span>
-          </div>
-        </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            confirm();
-          }}
-          disabled={busy}
-          aria-label="Marcar episódio visto"
-          className={`shrink-0 self-center w-9 h-9 rounded-full bg-accent flex items-center justify-center active:scale-90 transition-transform ${
-            popping ? "scale-125" : "scale-100"
-          } disabled:opacity-50`}
-        >
-          <Check
-            className="w-5 h-5"
-            strokeWidth={3}
-            style={{
-              color: popping ? "#5BD68F" : "var(--color-text-primary)",
+      <View style={{ width: 60, height: 88, flexShrink: 0 }}>
+        <Poster path={item.poster_path} alt={item.title} size="w92" style={{ width: "100%", height: "100%" }} />
+      </View>
+      <View style={{ flex: 1, gap: 6 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+          <Text style={{ fontSize: 15, fontWeight: "600", color: "#F5F5F7", flex: 1 }} numberOfLines={1}>
+            {item.title}
+          </Text>
+          <Ionicons name="chevron-forward" size={16} color="#6A6A72" />
+          <View style={{ backgroundColor: "#7E2828", borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2, flexShrink: 0 }}>
+            <Text style={{ fontSize: 10, fontWeight: "600", color: "#F24E4E" }}>Assistindo</Text>
+          </View>
+        </View>
+        <Text style={{ fontSize: 13, fontWeight: "500", color: "#A8A8B0" }}>
+          T{item.current_season} • E{watched}
+          {total ? ` de ${total}` : ""}
+        </Text>
+        <View style={{ height: 4, backgroundColor: "#2A2A30", borderRadius: 2, overflow: "hidden" }}>
+          <View style={{ height: 4, backgroundColor: "#F24E4E", borderRadius: 2, width: `${pct}%` }} />
+        </View>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+          <Text style={{ fontSize: 11, color: "#6A6A72" }}>
+            {total ? `Faltam ${remaining} eps` : "—"}
+          </Text>
+          <TouchableOpacity
+            onPress={(e) => {
+              e.stopPropagation?.();
+              confirm();
             }}
-          />
-        </button>
-      </div>
-    </div>
+            disabled={busy}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: "#F24E4E",
+              justifyContent: "center",
+              alignItems: "center",
+              transform: [{ scale: popping ? 1.25 : 1 }],
+            }}
+          >
+            <Ionicons name="checkmark" size={20} color={popping ? "#5BD68F" : "#F5F5F7"} strokeWidth={3} />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Pressable>
   );
 }

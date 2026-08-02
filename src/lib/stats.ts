@@ -1,15 +1,11 @@
-"use client";
-
-import { createClient } from "./supabase-client";
+import { createClient } from "./supabase";
 import type { LibraryItem, WatchedEpisode } from "./types";
 
 type Sb = NonNullable<ReturnType<typeof createClient>>;
-async function sb(): Promise<Sb | null> {
-  const c = createClient();
-  if (!c) return null;
-  const { data } = await c.auth.getSession();
-  if (!data.session) return null;
-  return c;
+let client: Sb | null = null;
+function sb(): Sb | null {
+  if (!client) client = createClient();
+  return client;
 }
 
 export interface Stats {

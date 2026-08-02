@@ -1,12 +1,8 @@
-"use client";
-
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase-client";
+import { createClient } from "./supabase";
 import type { Session, User } from "@supabase/supabase-js";
 
-type SupabaseClient = NonNullable<ReturnType<typeof createClient>>;
-
-let client: SupabaseClient | null = null;
+let client: NonNullable<ReturnType<typeof createClient>> | null = null;
 function getClient() {
   if (!client) client = createClient();
   return client;
@@ -21,7 +17,6 @@ export function useAuth() {
   useEffect(() => {
     const sb = getClient();
     if (!sb) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setConfigured(false);
       setLoading(false);
       return;
@@ -37,21 +32,16 @@ export function useAuth() {
       setLoading(false);
     };
 
-    // Listar PRIMEIRO — fonte confiável de quem está logado
-    sb.auth.getSession()
-      .then(({ data }) => {
-        if (data.session) apply(data.session);
-      })
-      .catch(() => {
-        if (mounted) setLoading(false);
-      });
+    sb.auth.getSession().then(({ data }) => {
+      if (data.session) apply(data.session);
+    }).catch(() => {
+      if (mounted) setLoading(false);
+    });
 
-    // Depois escutar mudanças em tempo real
     const { data: sub } = sb.auth.onAuthStateChange((_e, s) => {
       apply(s);
     });
 
-    // Fallback: se nada respondeu em 3s, libera o loading
     const timeout = setTimeout(() => {
       if (mounted) setLoading(false);
     }, 3000);

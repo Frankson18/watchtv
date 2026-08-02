@@ -1,8 +1,8 @@
-"use client";
-
 import { useState } from "react";
+import { View, Text, TouchableOpacity } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
 import { markEpisode, rewatchEpisode } from "@/lib/library";
-import { Check } from "lucide-react";
 
 export default function EpisodeRow({
   libraryId,
@@ -30,15 +30,13 @@ export default function EpisodeRow({
   onUpdated?: () => void;
 }) {
   const [busy, setBusy] = useState(false);
-  const [popping, setPopping] = useState(false);
   const [localWatched, setLocalWatched] = useState(watched);
   const [localCount, setLocalCount] = useState(watchCount);
 
   async function onCheck() {
     if (busy) return;
     setBusy(true);
-    setPopping(true);
-    setTimeout(() => setPopping(false), 350);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     try {
       if (!localWatched) {
         await markEpisode(libraryId, season, episode, tmdbId);
@@ -59,48 +57,41 @@ export default function EpisodeRow({
     : "—";
 
   return (
-    <div className="flex gap-3 px-4 py-3 active:bg-bg-elev/50 transition-colors">
-      <button
-        onClick={onCheck}
-        disabled={busy}
-        aria-label="Marcar episódio"
-        className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center mt-0.5 active:scale-90 transition-transform ${
-          popping ? "scale-125" : "scale-100"
-        } ${
-          localWatched
-            ? "bg-accent"
-            : "border-2 border-border"
-        }`}
+    <TouchableOpacity
+      onPress={onCheck}
+      disabled={busy}
+      style={{ flexDirection: "row", gap: 12, paddingHorizontal: 16, paddingVertical: 12 }}
+    >
+      <View
+        style={{
+          width: 28,
+          height: 28,
+          borderRadius: 14,
+          borderWidth: localWatched ? 0 : 2,
+          borderColor: "#2A2A30",
+          backgroundColor: localWatched ? "#F24E4E" : "transparent",
+          justifyContent: "center",
+          alignItems: "center",
+          marginTop: 2,
+        }}
       >
-        {localWatched && (
-          <Check
-            className="w-4 h-4 text-text-primary"
-            strokeWidth={3}
-            style={{ color: popping ? "#5BD68F" : "var(--color-text-primary)" }}
-          />
-        )}
-      </button>
-      <div className="flex-1 min-w-0 flex flex-col gap-1">
-        <div className="flex items-start justify-between gap-3">
-          <h3 className="text-[15px] font-semibold leading-tight">
+        {localWatched && <Ionicons name="checkmark" size={16} color="#F5F5F7" strokeWidth={3} />}
+      </View>
+      <View style={{ flex: 1, gap: 4 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 8 }}>
+          <Text style={{ fontSize: 15, fontWeight: "600", color: "#F5F5F7", flex: 1 }} numberOfLines={1}>
             E{episode} · {title}
-          </h3>
-          <div className="flex items-center gap-2 shrink-0">
-            {localCount > 1 && (
-              <span className="text-[11px] font-bold text-accent">×{localCount}</span>
-            )}
-            <span className="text-[12px] text-text-tertiary">{dateFmt}</span>
-          </div>
-        </div>
-        {synopsis && (
-          <p className="text-[12px] text-text-secondary leading-snug line-clamp-2">
-            {synopsis}
-          </p>
-        )}
-        <span className="text-[11px] text-text-tertiary">
-          {runtime ? `${runtime} min` : "—"}
-        </span>
-      </div>
-    </div>
+          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            {localCount > 1 && <Text style={{ fontSize: 11, fontWeight: "700", color: "#F24E4E" }}>×{localCount}</Text>}
+            <Text style={{ fontSize: 12, color: "#6A6A72" }}>{dateFmt}</Text>
+          </View>
+        </View>
+        {synopsis ? (
+          <Text style={{ fontSize: 12, color: "#A8A8B0", lineHeight: 16 }} numberOfLines={2}>{synopsis}</Text>
+        ) : null}
+        <Text style={{ fontSize: 11, color: "#6A6A72" }}>{runtime ? `${runtime} min` : "—"}</Text>
+      </View>
+    </TouchableOpacity>
   );
 }

@@ -4845,7 +4845,7 @@
           "name": "Hero",
           "clip": true,
           "width": "fill_container",
-          "height": 240,
+          "height": 280,
           "fill": "$bg-elev-2",
           "layout": "vertical",
           "justifyContent": "end",
@@ -4925,119 +4925,6 @@
             16
           ],
           "children": [
-            {
-              "type": "frame",
-              "id": "aBGFV",
-              "name": "TitleBlock",
-              "width": "fill_container",
-              "layout": "vertical",
-              "gap": 6,
-              "children": [
-                {
-                  "type": "text",
-                  "id": "CeUI0",
-                  "name": "Title",
-                  "fill": "$text-primary",
-                  "content": "Severance",
-                  "fontFamily": "$font-body",
-                  "fontSize": 26,
-                  "fontWeight": "700"
-                },
-                {
-                  "type": "text",
-                  "id": "l9PCqW",
-                  "name": "Meta",
-                  "fill": "$text-secondary",
-                  "content": "2 temporadas - 2022 - Em exibicao",
-                  "fontFamily": "$font-body",
-                  "fontSize": 13,
-                  "fontWeight": "normal"
-                },
-                {
-                  "type": "frame",
-                  "id": "IyZIb",
-                  "name": "Chips",
-                  "gap": 6,
-                  "children": [
-                    {
-                      "type": "frame",
-                      "id": "l4fDgU",
-                      "name": "Suspense",
-                      "fill": "$bg-elev",
-                      "cornerRadius": 999,
-                      "stroke": "$border",
-                      "strokeWidth": 1,
-                      "padding": [
-                        4,
-                        10
-                      ],
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "t9Gg9q",
-                          "name": "L",
-                          "fill": "$text-secondary",
-                          "content": "Suspense",
-                          "fontFamily": "$font-body",
-                          "fontSize": 11,
-                          "fontWeight": "500"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "Cpp4D",
-                      "name": "Ficcao",
-                      "fill": "$bg-elev",
-                      "cornerRadius": 999,
-                      "stroke": "$border",
-                      "strokeWidth": 1,
-                      "padding": [
-                        4,
-                        10
-                      ],
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "KdWd5",
-                          "name": "L",
-                          "fill": "$text-secondary",
-                          "content": "Ficcao",
-                          "fontFamily": "$font-body",
-                          "fontSize": 11,
-                          "fontWeight": "500"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "x0HK2",
-                      "name": "Drama",
-                      "fill": "$bg-elev",
-                      "cornerRadius": 999,
-                      "stroke": "$border",
-                      "strokeWidth": 1,
-                      "padding": [
-                        4,
-                        10
-                      ],
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "NEElS",
-                          "name": "L",
-                          "fill": "$text-secondary",
-                          "content": "Drama",
-                          "fontFamily": "$font-body",
-                          "fontSize": 11,
-                          "fontWeight": "500"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            },
             {
               "type": "frame",
               "id": "l4Yb6",

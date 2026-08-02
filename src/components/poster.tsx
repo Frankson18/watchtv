@@ -1,38 +1,43 @@
-"use client";
-
-import { posterUrl } from "@/lib/images";
-import { useState } from "react";
+import { Image, View, Text } from "react-native";
+import { posterUrl } from "@/lib/tmdb-config";
 
 export default function Poster({
   path,
   alt,
   size = "w185",
-  className = "",
+  style,
 }: {
   path: string | null;
   alt: string;
   size?: "w92" | "w154" | "w185" | "w342" | "w500";
-  className?: string;
+  style?: any;
 }) {
-  const [err, setErr] = useState(false);
   const src = posterUrl(path, size);
-  if (!src || err) {
+  if (!src) {
     return (
-      <div
-        className={`bg-bg-elev-2 rounded-md flex items-center justify-center text-text-tertiary text-[10px] font-medium px-2 text-center ${className}`}
+      <View
+        style={[
+          {
+            backgroundColor: "#1F1F24",
+            borderRadius: 6,
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 8,
+          },
+          style,
+        ]}
       >
-        {alt.slice(0, 24) || "—"}
-      </div>
+        <Text style={{ fontSize: 10, color: "#6A6A72", textAlign: "center" }}>
+          {alt.slice(0, 24) || "—"}
+        </Text>
+      </View>
     );
   }
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={src}
+    <Image
+      source={typeof src === "number" ? src : { uri: src }}
       alt={alt}
-      loading="lazy"
-      onError={() => setErr(true)}
-      className={`rounded-md object-cover ${className}`}
+      style={[{ borderRadius: 6 }, style]}
     />
   );
 }

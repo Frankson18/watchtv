@@ -1,4 +1,3 @@
-import "server-only";
 import type {
   TmdbSearchResult,
   TmdbSeason,
@@ -7,47 +6,33 @@ import type {
   TmdbEpisode,
 } from "./types";
 import { mockTmdb, tmdbIsMock } from "./tmdb-mock";
-
-const BASE = process.env.TMDB_BASE_URL ?? "https://api.themoviedb.org/3";
-
-function tmdbKey() {
-  const k = process.env.TMDB_API_KEY;
-  if (!k) throw new Error("TMDB_API_KEY não configurada");
-  return k;
-}
-
-function isJwt(key: string): boolean {
-  return key.startsWith("eyJ");
-}
+import { tmdbApiUrl, tmdbHeaders } from "./tmdb-config";
 
 async function tmdbFetch<T>(
   path: string,
   params: Record<string, string | number | undefined> = {},
 ): Promise<T> {
-  const url = new URL(`${BASE}${path}`);
-  url.searchParams.set("language", "pt-BR");
-  for (const [k, v] of Object.entries(params)) {
-    if (v !== undefined && v !== null) url.searchParams.set(k, String(v));
-  }
-  const key = tmdbKey();
-  const headers: Record<string, string> = {};
-  if (isJwt(key)) {
-    headers["Authorization"] = `Bearer ${key}`;
-  } else {
-    url.searchParams.set("api_key", key);
-  }
-  const res = await fetch(url, { headers, next: { revalidate: 3600 } });
+  const url = tmdbApiUrl(path, params);
+  const headers = tmdbHeaders();
+  const res = await fetch(url, { headers });
   if (!res.ok) {
     throw new Error(`TMDB ${res.status}: ${path}`);
   }
   return res.json() as Promise<T>;
 }
 
+export function isMockMode() {
+  return tmdbIsMock();
+}
+
 export const tmdb = {
   searchMulti: (query: string, page = 1) =>
     tmdbIsMock()
       ? mockTmdb.searchMulti(query)
-      : tmdbFetch<{ results: TmdbSearchResult[]; total_pages: number }>("/search/multi", { query, page }),
+      : tmdbFetch<{ results: TmdbSearchResult[]; total_pages: number }>("/search/multi", {
+          query,
+          page,
+        }),
 
   tv: (id: number) =>
     tmdbIsMock()
