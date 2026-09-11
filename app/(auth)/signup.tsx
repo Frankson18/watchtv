@@ -9,6 +9,7 @@ import {
   Platform,
 } from "react-native";
 import { createClient } from "@/lib/supabase";
+import ScalePressable from "@/components/scale-pressable";
 
 export default function SignupScreen() {
   const [email, setEmail] = useState("");
@@ -24,10 +25,15 @@ export default function SignupScreen() {
       return;
     }
     setBusy(true);
-    const { error } = await sb.auth.signUp({ email, password });
+    const { data, error } = await sb.auth.signUp({ email, password });
     if (error) {
       setBusy(false);
       setError(error.message);
+      return;
+    }
+    if (!data.session) {
+      setBusy(false);
+      setError("Conta criada! Confirme seu e-mail para entrar.");
       return;
     }
     router.replace("/(tabs)/assistindo");
@@ -105,7 +111,7 @@ export default function SignupScreen() {
 
           {error && <Text style={{ color: "#F24E4E", fontSize: 14 }}>{error}</Text>}
 
-          <TouchableOpacity
+          <ScalePressable
             onPress={submit}
             disabled={busy}
             style={{
@@ -119,7 +125,7 @@ export default function SignupScreen() {
             <Text style={{ color: "#F5F5F7", fontSize: 14, fontWeight: "600" }}>
               {busy ? "Criando…" : "Criar conta"}
             </Text>
-          </TouchableOpacity>
+          </ScalePressable>
 
           <TouchableOpacity onPress={() => router.push("/login")}>
             <Text style={{ color: "#A8A8B0", fontSize: 14, textAlign: "center" }}>

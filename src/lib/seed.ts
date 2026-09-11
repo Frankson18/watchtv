@@ -16,6 +16,7 @@ interface SeedItem {
   current_season: number;
   current_episode: number;
   total_seasons: number | null;
+  daysAgo?: number;
 }
 
 const SEED: SeedItem[] = [
@@ -33,16 +34,18 @@ const SEED: SeedItem[] = [
     tmdb_id: 1398, media_type: "tv", status: "watching", title: "Shogun",
     poster_path: null, backdrop_path: null,
     release_date: "2024-02-27", current_season: 1, current_episode: 3, total_seasons: 1,
+    daysAgo: 45,
   },
   {
     tmdb_id: 1399, media_type: "tv", status: "watching", title: "House of the Dragon",
     poster_path: null, backdrop_path: null,
     release_date: "2022-08-21", current_season: 2, current_episode: 4, total_seasons: 2,
+    daysAgo: 60,
   },
   {
     tmdb_id: 1400, media_type: "tv", status: "watching", title: "One Piece",
     poster_path: null, backdrop_path: null,
-    release_date: "2023-08-31", current_season: 1, current_episode: 22, total_seasons: 1,
+    release_date: "2023-08-31", current_season: 1, current_episode: 0, total_seasons: 1,
   },
   {
     tmdb_id: 1401, media_type: "tv", status: "completed", title: "Stranger Things",
@@ -85,12 +88,20 @@ export async function seedDemoLibraryOnce() {
     const have = new Set(
       (existing ?? []).map((r: { tmdb_id: number; media_type: string }) => `${r.tmdb_id}-${r.media_type}`),
     );
-    const rows = SEED.filter((s) => !have.has(`${s.tmdb_id}-${s.media_type}`)).map((s) => ({
-      ...s,
-      user_id: userId,
-      runtime_minutes: s.media_type === "movie" ? 130 : null,
-      last_watched_at: s.status === "watching" ? new Date().toISOString() : null,
-    }));
+    const rows = SEED.filter((s) => !have.has(`${s.tmdb_id}-${s.media_type}`)).map((s) => {
+      const daysAgo = s.daysAgo ?? 0;
+      const lastWatched = s.status === "watching" && daysAgo > 0
+        ? new Date(Date.now() - daysAgo * 86400000).toISOString()
+        : s.status === "watching"
+          ? new Date().toISOString()
+          : null;
+      return {
+        ...s,
+        user_id: userId,
+        runtime_minutes: s.media_type === "movie" ? 130 : null,
+        last_watched_at: lastWatched,
+      };
+    });
     if (rows.length > 0) {
       const inserted = await c.from("library").insert(rows).select("id, tmdb_id, media_type, current_season, current_episode");
       if (inserted.data) {

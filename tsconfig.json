@@ -37,7 +37,8 @@
     "next.config.ts",
     "next-env.d.ts",
     "src/lib/supabase-client.ts",
-    "src/lib/supabase-server.ts"
+    "src/lib/supabase-server.ts",
+    "supabase/functions"
   ],
   "extends": "expo/tsconfig.base"
 }

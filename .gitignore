@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -46,3 +47,20 @@ next-env.d.ts
 expo-env.d.ts
 .expo/
 # @end expo-cli
+
+# Firebase / credenciais
+google-services.json
+GoogleService-Info.plist
+*firebase-adminsdk*.json
+
+# nativo gerado (Expo prebuild / CNG)
+/android
+/ios
+
+# credenciais de build/assinatura
+credentials.json
+*.jks
+*.keystore
+
+# config local do opencode
+opencode.json

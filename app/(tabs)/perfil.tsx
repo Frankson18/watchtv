@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, ActivityIndicator, Switch, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import Poster from "@/components/poster";
+import ScalePressable from "@/components/scale-pressable";
 import { useAuth } from "@/lib/use-auth";
 import { createClient } from "@/lib/supabase";
+import { notificationsEnabled, setNotificationsEnabled } from "@/lib/notifications";
 import {
   getStats,
   getRecentActivity,
@@ -37,10 +39,12 @@ export default function PerfilScreen() {
   const [recent, setRecent] = useState<RecentActivity[]>([]);
   const [contrib, setContrib] = useState<ContributionDay[]>([]);
   const [loading, setLoading] = useState(true);
+  const [notifOn, setNotifOn] = useState(false);
   const year = new Date().getFullYear();
 
   useEffect(() => {
     let active = true;
+    notificationsEnabled().then((v) => { if (active) setNotifOn(v); });
     (async () => {
       const [s, r, c] = await Promise.all([
         getStats(),
@@ -55,6 +59,15 @@ export default function PerfilScreen() {
     })();
     return () => { active = false; };
   }, [year]);
+
+  async function toggleNotifications(value: boolean) {
+    setNotifOn(value);
+    const result = await setNotificationsEnabled(value);
+    setNotifOn(result);
+    if (value && !result) {
+      Alert.alert("Permissão necessária", "Ative as notificações nas configurações do sistema para receber os avisos.");
+    }
+  }
 
   const email = user?.email ?? "—";
   const name = email.split("@")[0];
@@ -93,7 +106,6 @@ export default function PerfilScreen() {
         <>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
             <StatCard label="Séries" value={stats?.showsWatching ?? 0} icon="tv" sub="assistindo" />
-            <StatCard label="Animes" value={stats?.animesWatching ?? 0} icon="sparkles" sub="assistindo" />
             <StatCard label="Filmes" value={stats?.moviesWatched ?? 0} icon="film" sub="vistos" />
             <StatCard label="Episódios" value={stats?.episodesTotal ?? 0} icon="play" sub="totais" />
           </View>
@@ -101,7 +113,6 @@ export default function PerfilScreen() {
           <View style={{ gap: 8 }}>
             <Text style={{ fontSize: 13, fontWeight: "600", color: "#6A6A72" }}>TEMPO ASSISTIDO</Text>
             <DurationRow label="Séries" value={formatDuration(stats?.durationTvMinutes ?? 0)} />
-            <DurationRow label="Animes" value={formatDuration(stats?.durationTvMinutes ?? 0)} />
             <DurationRow label="Filmes" value={formatDuration(stats?.durationMoviesMinutes ?? 0)} />
           </View>
 
@@ -179,6 +190,20 @@ export default function PerfilScreen() {
             </View>
           </View>
 
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10, padding: 12, borderRadius: 12, backgroundColor: "#161619", borderWidth: 1, borderColor: "#2A2A30" }}>
+            <Ionicons name="notifications-outline" size={20} color="#A8A8B0" />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: "500", color: "#F5F5F7" }}>Notificações de lançamento</Text>
+              <Text style={{ fontSize: 12, color: "#6A6A72" }}>Avisar quando episódios e filmes da sua lista chegarem</Text>
+            </View>
+            <Switch
+              value={notifOn}
+              onValueChange={toggleNotifications}
+              trackColor={{ true: "#F24E4E", false: "#2A2A30" }}
+              thumbColor="#F5F5F7"
+            />
+          </View>
+
           <SignOutButton />
         </>
       )}
@@ -211,7 +236,7 @@ function DurationRow({ label, value }: { label: string; value: string }) {
 function SignOutButton() {
   const sb = createClient();
   return (
-    <TouchableOpacity
+    <ScalePressable
       onPress={async () => {
         await sb?.auth.signOut();
         router.replace("/login");
@@ -220,6 +245,6 @@ function SignOutButton() {
     >
       <Ionicons name="log-out-outline" size={18} color="#A8A8B0" />
       <Text style={{ fontSize: 14, fontWeight: "500", color: "#A8A8B0" }}>Sair</Text>
-    </TouchableOpacity>
+    </ScalePressable>
   );
 }

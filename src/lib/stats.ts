@@ -10,7 +10,6 @@ function sb(): Sb | null {
 
 export interface Stats {
   showsWatching: number;
-  animesWatching: number;
   moviesWatched: number;
   episodesTotal: number;
   durationTvMinutes: number;
@@ -60,7 +59,6 @@ export async function getStats(): Promise<Stats> {
   const showsWatching = items.filter(
     (i) => i.media_type === "tv" && i.status === "watching",
   ).length;
-  const animesWatching = showsWatching;
   const moviesWatched = items.filter(
     (i) => i.media_type === "movie" && i.status === "completed",
   ).length;
@@ -92,7 +90,6 @@ export async function getStats(): Promise<Stats> {
 
   return {
     showsWatching,
-    animesWatching,
     moviesWatched,
     episodesTotal,
     durationTvMinutes: minsTv,
@@ -220,7 +217,6 @@ export async function getContributionData(
 function zero(): Stats {
   return {
     showsWatching: 0,
-    animesWatching: 0,
     moviesWatched: 0,
     episodesTotal: 0,
     durationTvMinutes: 0,

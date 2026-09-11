@@ -100,6 +100,49 @@ export async function setStatus(id: string, status: MediaStatus) {
   await c.from("library").update({ status }).eq("id", id);
 }
 
+export async function startSeason(libraryId: string, season: number): Promise<void> {
+  const c = await sbAuthed();
+  if (!c) return;
+  const { error } = await c
+    .from("library")
+    .update({ status: "watching", current_season: season, current_episode: 0 })
+    .eq("id", libraryId);
+  if (error) throw error;
+}
+
+export async function markSeasonWatched(
+  libraryId: string,
+  season: number,
+  episodeCount: number,
+): Promise<void> {
+  const c = await sbAuthed();
+  if (!c) return;
+  const now = new Date().toISOString();
+  const rows = Array.from({ length: Math.max(0, episodeCount) }, (_, i) => ({
+    library_id: libraryId,
+    season,
+    episode: i + 1,
+    watch_count: 1,
+    watched_at: now,
+  }));
+  if (rows.length > 0) {
+    const { error } = await c
+      .from("watched_episodes")
+      .upsert(rows, { onConflict: "library_id,season,episode", ignoreDuplicates: true });
+    if (error) throw error;
+  }
+  const { error: libErr } = await c
+    .from("library")
+    .update({
+      status: "watching",
+      current_season: season,
+      current_episode: episodeCount,
+      last_watched_at: now,
+    })
+    .eq("id", libraryId);
+  if (libErr) throw libErr;
+}
+
 export async function removeFromLibrary(id: string): Promise<void> {
   const c = await sbAuthed();
   if (!c) return;
@@ -152,10 +195,40 @@ export async function markEpisode(
   const { error: libErr } = await c
     .from("library")
     .update({
+      status: "watching",
       current_season: season,
       current_episode: episode,
       last_watched_at: new Date().toISOString(),
     })
+    .eq("id", libraryId);
+  if (libErr) throw libErr;
+}
+
+export async function unmarkEpisode(
+  libraryId: string,
+  season: number,
+  episode: number,
+): Promise<void> {
+  const c = await sbAuthed();
+  if (!c) return;
+  const { error } = await c
+    .from("watched_episodes")
+    .delete()
+    .eq("library_id", libraryId)
+    .eq("season", season)
+    .eq("episode", episode);
+  if (error) throw error;
+  const { data } = await c
+    .from("watched_episodes")
+    .select("episode")
+    .eq("library_id", libraryId)
+    .eq("season", season)
+    .order("episode", { ascending: false })
+    .limit(1);
+  const maxEp = data && data.length ? (data[0] as { episode: number }).episode : 0;
+  const { error: libErr } = await c
+    .from("library")
+    .update({ current_episode: maxEp })
     .eq("id", libraryId);
   if (libErr) throw libErr;
 }
@@ -226,4 +299,64 @@ export async function listWatched(libraryId: string, season: number): Promise<Wa
     .order("episode", { ascending: true });
   if (error) throw error;
   return (data ?? []) as WatchedEpisode[];
+}
+
+export interface RecentWatchedEntry {
+  id: string;
+  library_id: string;
+  season: number;
+  episode: number;
+  watched_at: string;
+  watch_count: number;
+  tmdb_id: number;
+  title: string;
+  poster_path: string | null;
+  media_type: MediaType;
+}
+
+export async function listRecentWatched(limit = 20, offset = 0): Promise<RecentWatchedEntry[]> {
+  const c = await sbAuthed();
+  if (!c) return [];
+  const { data: eps, error } = await c
+    .from("watched_episodes")
+    .select("id, library_id, season, episode, watched_at, watch_count")
+    .order("watched_at", { ascending: false })
+    .order("id", { ascending: false })
+    .range(offset, offset + limit - 1);
+  if (error) throw error;
+  const rows = (eps ?? []) as Pick<
+    WatchedEpisode,
+    "id" | "library_id" | "season" | "episode" | "watched_at" | "watch_count"
+  >[];
+  if (rows.length === 0) return [];
+
+  const ids = [...new Set(rows.map((r) => r.library_id))];
+  const { data: libs, error: libErr } = await c
+    .from("library")
+    .select("id, tmdb_id, title, poster_path, media_type")
+    .in("id", ids);
+  if (libErr) throw libErr;
+  const libById = new Map(
+    ((libs ?? []) as Pick<
+      LibraryItem,
+      "id" | "tmdb_id" | "title" | "poster_path" | "media_type"
+    >[]).map((l) => [l.id, l] as const),
+  );
+
+  return rows.flatMap((r) => {
+    const l = libById.get(r.library_id);
+    if (!l) return [];
+    return [{
+      id: r.id,
+      library_id: r.library_id,
+      season: r.season,
+      episode: r.episode,
+      watched_at: r.watched_at,
+      watch_count: r.watch_count ?? 1,
+      tmdb_id: l.tmdb_id,
+      title: l.title,
+      poster_path: l.poster_path ?? null,
+      media_type: l.media_type,
+    }];
+  });
 }

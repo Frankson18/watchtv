@@ -59,6 +59,7 @@ export interface TmdbTv {
   first_air_date: string | null;
   number_of_seasons: number;
   number_of_episodes: number;
+  status?: string;
   seasons: TmdbSeason[];
   last_episode_to_air: TmdbEpisode | null;
   next_episode_to_air: TmdbEpisode | null;

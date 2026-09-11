@@ -19,6 +19,7 @@
     },
     "android": {
       "package": "com.watchtv.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./public/icon-512.png",
         "backgroundColor": "#0B0B0E"
@@ -38,6 +39,14 @@
         {
           "fonts": []
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./public/icon-512.png",
+          "color": "#F24E4E",
+          "defaultChannel": "releases"
+        }
       ]
     ],
     "experiments": {
@@ -45,14 +54,16 @@
     },
     "extra": {
       "eas": {
-        "projectId": ""
-      }
+        "projectId": "269f23c3-b5d5-45dd-b2d5-ba70d1308858"
+      },
+      "router": {}
     },
     "runtimeVersion": {
       "policy": "appVersion"
     },
     "updates": {
-      "url": ""
-    }
+      "enabled": false
+    },
+    "owner": "frankson31"
   }
 }

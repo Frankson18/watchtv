@@ -50,7 +50,17 @@ export function posterUrl(
 export function backdropUrl(
   path: string | null,
   size: "w300" | "w780" | "w1280" = "w780",
-): string | null {
+): string | number | null {
+  if (!path) return null;
+  if (isMockMode()) return require("../../assets/mock-backdrop.png");
+  if (path.startsWith("/mock/")) return null;
+  return `${TMDB_IMAGE_BASE}/${size}${path}`;
+}
+
+export function stillUrl(
+  path: string | null,
+  size: "w185" | "w300" = "w300",
+): string | number | null {
   if (!path) return null;
   if (isMockMode()) return require("../../assets/mock-backdrop.png");
   if (path.startsWith("/mock/")) return null;

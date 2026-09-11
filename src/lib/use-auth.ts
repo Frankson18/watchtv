@@ -22,11 +22,9 @@ export function useAuth() {
       return;
     }
     let mounted = true;
-    let resolved = false;
 
     const apply = (s: Session | null) => {
-      if (!mounted || resolved) return;
-      resolved = true;
+      if (!mounted) return;
       setUser(s?.user ?? null);
       setSession(s);
       setLoading(false);

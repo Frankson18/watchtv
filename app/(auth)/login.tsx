@@ -9,6 +9,7 @@ import {
   Platform,
 } from "react-native";
 import { createClient } from "@/lib/supabase";
+import ScalePressable from "@/components/scale-pressable";
 
 export default function LoginScreen() {
   const [email, setEmail] = useState("");
@@ -105,7 +106,7 @@ export default function LoginScreen() {
 
           {error && <Text style={{ color: "#F24E4E", fontSize: 14 }}>{error}</Text>}
 
-          <TouchableOpacity
+          <ScalePressable
             onPress={submit}
             disabled={busy}
             style={{
@@ -119,7 +120,7 @@ export default function LoginScreen() {
             <Text style={{ color: "#F5F5F7", fontSize: 14, fontWeight: "600" }}>
               {busy ? "Entrando…" : "Entrar"}
             </Text>
-          </TouchableOpacity>
+          </ScalePressable>
 
           <TouchableOpacity onPress={() => router.push("/signup")}>
             <Text style={{ color: "#A8A8B0", fontSize: 14, textAlign: "center" }}>

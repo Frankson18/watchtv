@@ -1,15 +1,60 @@
 import { Tabs, router } from "expo-router";
 import { useEffect, useRef } from "react";
-import { View, Text, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/lib/use-auth";
 import { seedDemoLibraryOnce } from "@/lib/seed";
 import { backfillRealImagesOnce } from "@/lib/backfill";
+import { repairEpisodeOverflowOnce } from "@/lib/repair";
+import { syncNotifications } from "@/lib/notifications";
+
+function CustomTabBar({ state, descriptors, navigation }: any) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: Math.max(insets.bottom, 12), backgroundColor: "#0B0B0E" }}>
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          backgroundColor: "#1F1F24",
+          borderRadius: 999,
+          padding: 8,
+          shadowColor: "#000",
+          shadowOpacity: 0.37,
+          shadowRadius: 12,
+          shadowOffset: { width: 0, height: 4 },
+          elevation: 12,
+        }}
+      >
+        {state.routes.map((route: any, index: number) => {
+          const { options } = descriptors[route.key];
+          const label: string = options.title ?? route.name;
+          const active = state.index === index;
+          const color = active ? "#F24E4E" : "#6A6A72";
+          return (
+            <Pressable
+              key={route.key}
+              onPress={() => {
+                const event = navigation.emit({ type: "tabPress", target: route.key, canPreventDefault: true });
+                if (!active && !event.defaultPrevented) navigation.navigate(route.name);
+              }}
+              style={{ flex: 1, alignItems: "center", gap: 4, paddingVertical: 4 }}
+            >
+              {options.tabBarIcon?.({ color, size: 22, focused: active })}
+              <Text numberOfLines={1} style={{ fontSize: 10, fontWeight: active ? "600" : "500", color }}>
+                {label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
 
 export default function TabsLayout() {
   const { user, loading, configured } = useAuth();
-  const insets = useSafeAreaInsets();
   const seededRef = useRef(false);
   const redirectingRef = useRef(false);
 
@@ -31,6 +76,8 @@ export default function TabsLayout() {
     seededRef.current = true;
     seedDemoLibraryOnce().then(() => {
       backfillRealImagesOnce();
+      repairEpisodeOverflowOnce();
+      syncNotifications();
     });
   }, [userId]);
 
@@ -57,26 +104,12 @@ export default function TabsLayout() {
 
   return (
     <Tabs
-      screenOptions={{
-        headerShown: false,
-        sceneStyle: { backgroundColor: "#0B0B0E" },
-        tabBarStyle: {
-          backgroundColor: "#1F1F24",
-          borderTopColor: "#2A2A30",
-          borderTopWidth: 1,
-          height: 60 + insets.bottom,
-          paddingBottom: Math.max(8, insets.bottom),
-          paddingTop: 8,
-        },
-        tabBarActiveTintColor: "#F24E4E",
-        tabBarInactiveTintColor: "#6A6A72",
-        tabBarLabelStyle: { fontSize: 10, fontWeight: "500" },
-      }}
+      tabBar={(props) => <CustomTabBar {...props} />}
+      screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: "#0B0B0E" } }}
     >
       <Tabs.Screen name="assistindo" options={{ title: "Assistindo", tabBarIcon: ({ color, size }) => <Ionicons name="play" color={color} size={size} /> }} />
-      <Tabs.Screen name="temporadas" options={{ title: "Temporadas", tabBarIcon: ({ color, size }) => <Ionicons name="layers" color={color} size={size} /> }} />
+      <Tabs.Screen name="temporadas" options={{ title: "Minha lista", tabBarIcon: ({ color, size }) => <Ionicons name="albums" color={color} size={size} /> }} />
       <Tabs.Screen name="calendario" options={{ title: "Calendário", tabBarIcon: ({ color, size }) => <Ionicons name="calendar" color={color} size={size} /> }} />
-      <Tabs.Screen name="filmes" options={{ title: "Filmes", tabBarIcon: ({ color, size }) => <Ionicons name="film" color={color} size={size} /> }} />
       <Tabs.Screen name="buscar" options={{ title: "Buscar", tabBarIcon: ({ color, size }) => <Ionicons name="search" color={color} size={size} /> }} />
       <Tabs.Screen name="perfil" options={{ title: "Perfil", tabBarIcon: ({ color, size }) => <Ionicons name="person" color={color} size={size} /> }} />
     </Tabs>

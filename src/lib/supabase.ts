@@ -10,7 +10,7 @@ const secureStoreAdapter = {
   removeItem: (key: string) => SecureStore.deleteItemAsync(key),
 };
 
-export function createClient() {
+function buildClient() {
   if (!supabaseUrl || !supabaseAnonKey) return null;
   return createSupabaseClient(supabaseUrl, supabaseAnonKey, {
     auth: {
@@ -20,6 +20,13 @@ export function createClient() {
       detectSessionInUrl: false,
     },
   });
+}
+
+let cachedClient: ReturnType<typeof buildClient> | undefined;
+
+export function createClient() {
+  if (cachedClient === undefined) cachedClient = buildClient();
+  return cachedClient;
 }
 
 export type SupabaseClient = NonNullable<ReturnType<typeof createClient>>;

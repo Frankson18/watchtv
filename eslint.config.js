@@ -13,6 +13,7 @@ module.exports = defineConfig([
       "src/app-nextjs-backup/**",
       "src/lib/supabase-client.ts",
       "src/lib/supabase-server.ts",
+      "supabase/functions/**",
     ],
   },
 ]);
